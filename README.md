@@ -2,6 +2,8 @@
 
 An AI-powered browser automation agent that combines [Kernel](https://onkernel.com) and the [Vercel AI SDK](https://ai-sdk.dev) to execute natural language tasks using Playwright. This demo project was built to showcase the flexibility and power of the new [Playwright Execution API](https://www.onkernel.com/docs/browsers/playwright-execution) from Kernel.
 
+https://github.com/user-attachments/assets/7e8db9bc-2f01-4547-896b-0f7b82ab486e
+
 ## What It Does
 
 This tool creates an AI agent that can interact with websites through a remote browser. You describe what you want to accomplish in plain English, and the agent figures out how to do it by executing AI-generated Playwright commands.
