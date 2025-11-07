@@ -37,6 +37,8 @@ KERNEL_API_KEY=your_kernel_api_key
 npm run dev
 ```
 
+<img width="1055" height="470" alt="Screenshot 2025-11-07 at 11 03 57 AM" src="https://github.com/user-attachments/assets/6e289fef-670d-49cd-ae7c-669b40056294" />
+
 You'll be prompted to either choose from default example tasks or enter your own custom task. Examples:
 - "Navigate to google.com and search for 'AI agents'"
 - "Go to example.com and extract all the links on the page"
