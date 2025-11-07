@@ -97,7 +97,18 @@ async function main() {
       model: openai("gpt-5-mini"),
       tools: {
         execute_playwright: tool({
-          description: "execute some playwright typescript code against the current page. The code can assume the existence of a page variable that is a playwright page object. The code should have a return statement at the end that returns a value. The value will be available in the result property of the output schema.",
+          description: `Execute a focused Playwright action against the current page.
+          This tool works best for ATOMIC OPERATIONS - one action per call.
+          Examples of good uses: navigate to URL, click element, extract text, check visibility, fill form field, take screenshot.
+          Do NOT combine multiple actions in one call (e.g., navigate + click in same code).
+          If you need to do multiple things, make separate tool calls.
+          IMPORTANT: Always use short timeouts (5000ms or less) for selector methods to fail fast.
+          Add { timeout: 5000 } to methods like click(), fill(), isVisible(), etc.
+          Examples: .click({ timeout: 5000 }), .isVisible({ timeout: 3000 })
+          If a selector times out, try a different selector strategy instead of retrying.
+          Expected to receive a 'page' variable (Playwright Page object).
+          Always include a return statement with the result.
+          The return value appears in the 'result' field of the response.`,
           inputSchema: z.object({
             code: z.string().describe("the playwright code to execute")
           }),
