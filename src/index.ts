@@ -1,44 +1,95 @@
 import { openai } from '@ai-sdk/openai';
-import { Kernel } from '@onkernel/sdk';
+import { Kernel, NotFoundError } from '@onkernel/sdk';
 import { Experimental_Agent as Agent, stepCountIs, tool } from 'ai';
 import "dotenv/config";
-import * as readline from 'readline';
+import inquirer from 'inquirer';
+import chalk from 'chalk';
+import ora from 'ora';
+import boxen from 'boxen';
 import z from 'zod';
 
 /**
- * Prompts the user for input via the command line
+ * Prompts the user to select from default tasks or enter their own
  */
-function promptUser(question: string): Promise<string> {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-  });
+async function promptTaskSelection(): Promise<string> {
+  const TASK_OPTIONS = {
+    COINBASE: 'Visit https://www.ycombinator.com/companies, search for Coinbase, and report the company\'s team size.',
+    ONE_PIECE: "Visit https://onepiece.fandom.com/wiki/One_Piece_Wiki, find the 'On This Day' section, and tell me a fact from it.",
+    CUSTOM: 'Enter your own task'
+  };
 
-  return new Promise((resolve) => {
-    rl.question(question, (answer) => {
-      rl.close();
-      resolve(answer);
-    });
-  });
+  const answers = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'taskChoice',
+      message: 'Select a task:',
+      choices: [
+        { name: TASK_OPTIONS.COINBASE, value: 'coinbase' },
+        { name: TASK_OPTIONS.ONE_PIECE, value: 'onepiece' },
+        { name: TASK_OPTIONS.CUSTOM, value: 'custom' }
+      ]
+    }
+  ]);
+
+  switch (answers.taskChoice) {
+    case 'coinbase':
+      return TASK_OPTIONS.COINBASE;
+    case 'onepiece':
+      return TASK_OPTIONS.ONE_PIECE;
+    case 'custom':
+      return 'custom';
+    default:
+      return 'custom';
+  }
+}
+
+/**
+ * Prompts the user for input via inquirer with validation
+ */
+async function promptUser(question: string): Promise<string> {
+  const answers = await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'task',
+      message: question,
+      validate: (input: string) => {
+        if (!input.trim()) {
+          return 'Task cannot be empty. Please enter a valid task.';
+        }
+        return true;
+      }
+    }
+  ]);
+  return answers.task;
 }
 
 async function main() {
-  console.log('Welcome to Kernel AI SDK Agent!\n');
+  // Display welcome message with boxen
+  console.log(boxen(chalk.cyan.bold('Welcome to Kernel AI SDK Agent!'), {
+    padding: 1,
+    margin: 1,
+    borderStyle: 'round',
+    borderColor: 'cyan'
+  }));
 
-  // Get task from user
-  const task = await promptUser('Enter your task: ');
+  // Get task from user - either from menu or custom input
+  const selectedOption = await promptTaskSelection();
+  const task = selectedOption === 'custom'
+    ? await promptUser(chalk.yellow('Enter your task:'))
+    : selectedOption;
 
-  if (!task.trim()) {
-    console.error('Error: Task cannot be empty');
-    process.exit(1);
-  }
+  console.log(chalk.green('\n✓ Task received!\n'));
+  console.log(chalk.blue(`Starting agent to complete task: ${chalk.bold(`"${task}"`)}\n`));
 
-  console.log(`\nStarting agent to complete task: "${task}"\n`);
-
-  // Initialize Kernel and create browser session
+  // Initialize Kernel and create browser session with spinner
   const kernel = new Kernel();
-  const session = await kernel.browsers.create();
-  console.log(`Browser session created: ${session.browser_live_view_url}\n`);
+  const browserSpinner = ora(chalk.cyan('Creating browser session...')).start();
+
+  const session = await kernel.browsers.create({
+    stealth: true,
+  });
+  browserSpinner.succeed(chalk.green(`Browser session created: ${chalk.underline(session.browser_live_view_url)}`));
+  console.log();
 
   try {
     // Create AI agent with Playwright execution tool
@@ -59,11 +110,11 @@ async function main() {
             newSnapshot: z.string().optional().describe("The new snapshot of the page"),
           }),
           execute: async ({ code }) => {
-            console.log("Executing Playwright code...");
             const result = await kernel.browsers.playwright.execute(session.session_id, { code });
             const newSnapshot = await kernel.browsers.playwright.execute(session.session_id, {
               code: "return await page._snapshotForAI()"
             });
+
             return {
               ...result,
               newSnapshot: newSnapshot.result as string,
@@ -75,32 +126,49 @@ async function main() {
     });
 
     // Execute the agent with the user's task
+    const agentSpinner = ora(chalk.cyan('Agent is working on your task...')).start();
     const result = await agent.generate({
       prompt: task
     });
+    agentSpinner.succeed(chalk.green('Agent completed the task!'));
 
-    // Display results
-    console.log('\n--- Agent Completed ---');
-    console.log(`\nFinal Answer: ${result.text}`);
-    console.log(`\nSteps Taken: ${result.steps.length}`);
+    // Display results header with boxen
+    console.log('\n' + boxen(chalk.green.bold('✓ Agent Completed Successfully'), {
+      padding: 1,
+      margin: { top: 1, bottom: 1, left: 0, right: 0 },
+      borderStyle: 'round',
+      borderColor: 'green'
+    }));
 
-    // Log each step
-    result.steps.forEach((step, index) => {
-      console.log(`\nStep ${index + 1}:`);
-      console.log(`  Type: ${step.type}`);
-      if (step.text) {
-        console.log(`  Text: ${step.text}`);
-      }
-    });
+    console.log(chalk.bold.cyan('\nFinal Answer:'));
+    console.log(chalk.white(result.text));
+    console.log(chalk.bold.cyan(`\nSteps Taken: ${chalk.yellow(result.steps.length.toString())}\n`));
 
   } catch (error) {
-    console.error('Error:', error);
+    console.log('\n' + boxen(chalk.red.bold('✗ Error Occurred'), {
+      padding: 1,
+      margin: { top: 1, bottom: 1, left: 0, right: 0 },
+      borderStyle: 'round',
+      borderColor: 'red'
+    }));
+    console.error(chalk.red('Error details:'), error);
     process.exit(1);
   } finally {
     // Clean up browser session
-    console.log('\nCleaning up browser session...');
-    await kernel.browsers.deleteByID(session.session_id);
-    console.log('Done!');
+    const cleanupSpinner = ora(chalk.cyan('Cleaning up browser session...')).start();
+    try {
+      await kernel.browsers.deleteByID(session.session_id);
+      cleanupSpinner.succeed(chalk.green('Cleanup complete!'));
+    } catch (error) {
+      // If session is already deleted (404), that's fine - cleanup already happened
+      if (error instanceof NotFoundError || (error as any)?.status === 404) {
+        cleanupSpinner.succeed(chalk.yellow(`Session already cleaned up (ID: ${session.session_id})`));
+      } else {
+        cleanupSpinner.fail(chalk.red('Cleanup failed'));
+        throw error; // Re-throw unexpected errors
+      }
+    }
+    console.log(chalk.bold.green('\n✓ Done!\n'));
   }
 }
 
