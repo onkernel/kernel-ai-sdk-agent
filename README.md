@@ -1,10 +1,10 @@
 # Kernel AI SDK Agent
 
-An AI-powered browser automation agent that combines [Kernel](https://onkernel.com) and the [Vercel AI SDK](https://sdk.vercel.ai) to execute natural language tasks using Playwright.
+An AI-powered browser automation agent that combines [Kernel](https://onkernel.com) and the [Vercel AI SDK](https://ai-sdk.dev) to execute natural language tasks using Playwright. This demo project was built to showcase the flexibility and power of the new [Playwright Execution API](https://www.onkernel.com/docs/browsers/playwright-execution) from Kernel.
 
 ## What It Does
 
-This tool creates an AI agent that can interact with websites through a browser. You describe what you want to accomplish in plain English, and the agent figures out how to do it by executing Playwright commands.
+This tool creates an AI agent that can interact with websites through a remote browser. You describe what you want to accomplish in plain English, and the agent figures out how to do it by executing AI-generated Playwright commands.
 
 ## Prerequisites
 
@@ -37,19 +37,19 @@ KERNEL_API_KEY=your_kernel_api_key
 npm run dev
 ```
 
-You'll be prompted to enter your task. Examples:
+You'll be prompted to either choose from default example tasks or enter your own custom task. Examples:
 - "Navigate to google.com and search for 'AI agents'"
 - "Go to example.com and extract all the links on the page"
 - "Find the login button on website.com and click it"
 
-The agent will create a browser session, execute the task, and display the results. A live view URL is provided so you can watch the browser in real-time.
+The agent will create a browser session, execute the task, and display the results. A live view URL is provided so you can watch the remote browser in real-time.
 
 ## How It Works
 
 1. **Interactive Prompt**: The CLI prompts you for a task
 2. **Browser Session**: Kernel creates a managed browser session
 3. **AI Agent**: The agent (powered by GPT-5-mini) plans and executes steps
-4. **Playwright Tool**: The agent can execute Playwright code to interact with the page
+4. **Single Tool**: The agent utilizes a single tool called `execute_playwright` to interact with the page
 5. **Results**: The agent reports what it accomplished and cleans up the session
 
 The agent can take up to 20 steps to complete your task. Each step might involve:
@@ -62,8 +62,8 @@ The agent can take up to 20 steps to complete your task. Each step might involve
 
 ## Architecture
 
-- **Kernel**: Provides remote browser sessions and Playwright execution
-- **Vercel AI SDK**: Manages agent behavior and tool calling
+- **Kernel**: Provides [cloud browser sessions](https://www.onkernel.com/docs/browsers/create-a-browser) and [Playwright Execution API](https://www.onkernel.com/docs/browsers/playwright-execution)
+- **Vercel AI SDK**: Manages [Agent](https://ai-sdk.dev/docs/agents/overview) class behavior and tool calling
 - **GPT-5-mini**: Powers the AI agent's reasoning and planning
 
 ## License
